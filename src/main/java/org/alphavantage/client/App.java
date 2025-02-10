@@ -23,11 +23,11 @@ public class App
     private static String theTickers = "CRYPTO:BTC";
     //private static String dateFrom = "20220501T0000";
     //private static String dateTo   = "20220601T0000";
-    private static String filePath =  "C:\\Users\\jrobes\\Desktop\\AphaVantage\\";
 
+    //private static String filePath =  "C:\\Users\\jrobes\\Desktop\\AphaVantage\\";
+    private static String filePath =  "C:\\Users\\COTERENA\\Desktop\\AphaVantage\\";
 
-    public static void main( String[] args )
-    {
+    public static void main( String[] args ) throws IOException {
         System.out.println( "Hello World!" );
 
         //getSentimentByDate(apiKey, theTickers, "20220501T0000", "20220601T0000");
@@ -41,34 +41,38 @@ public class App
 
         //String parametros = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20240201T0130&time_TO=20240204T0130&limit=500&apikey=QOGVHCSIFK7MYBC3";
         //String parametros2 = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20220101T0000&time_to=20220201T0000&limit=1000&apikey=QOGVHCSIFK7MYBC3";
+
         JSONObject inputJSON = readJSONFromFile(theTickers, "20220501T0000", "20220601T0000");
-        writeJSON2File(inputJSON, theTickers);
+        writeJSON2File(inputJSON, theTickers, "20220501T0000", "20220601T0000");
 
     }
 
-    private static void writeJSON2File(JSONObject inputJSON, String theTickers) {
-        String filePath = "dfadf.csv";
+    private static void writeJSON2File(JSONObject inputJSON, String theTickers, String from, String to) throws IOException {
+        String filePath = getCsvFilename(theTickers, from, to);
+        CSVWriter writer = new CSVWriter(new FileWriter(filePath));
+        JSONArray jsonArray = inputJSON.getJSONArray("feed");
 
-        try (CSVWriter writer = new CSVWriter(new FileWriter(filePath))) {
-            JSONArray jsonArray = inputJSON.getJSONArray("feed");
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject noticia = jsonArray.getJSONObject(i);
-                String time = noticia.getString("time_published");
-                String summary = noticia.getString("summary");
-                JSONArray ticker_sentimentArray = noticia.getJSONArray("JSONArray");
-                for(int j = 0; i < ticker_sentimentArray.length(); j++){
-                    JSONObject scores = jsonArray.getJSONObject(i);
-                    String relevance_score = scores.getString("relevance_score");
-                    String ticker_sentiment_score = scores.getString("ticker_sentiment_score");
-                    String ticker_sentiment_label = scores.getString("ticker_sentiment_label");
+        for (int i = 0; i < jsonArray.length(); i++) {
+            JSONObject noticia = jsonArray.getJSONObject(i);
+            String time = noticia.getString("time_published");
+            String summary = noticia.getString("summary");
+            JSONArray ticker_sentimentArray = noticia.getJSONArray("ticker_sentiment");
+            System.out.println("ticker_sentimentArray: " + ticker_sentimentArray.length());
 
-                    writer.writeNext(new String[]{time, ticker_sentiment_label, ticker_sentiment_score, relevance_score, summary});
-
-                }
+            for(int j = 0; j < ticker_sentimentArray.length(); j++){
+                JSONObject scores = ticker_sentimentArray.getJSONObject(j);
+                //System.out.println(scores);
+                String relevance_score = scores.getString("relevance_score");
+                String ticker_sentiment_score = scores.getString("ticker_sentiment_score");
+                String ticker_sentiment_label = scores.getString("ticker_sentiment_label");
+                writer.writeNext(new String[]{time, ticker_sentiment_label, ticker_sentiment_score, relevance_score, summary});
             }
-        }catch (IOException e) {
-            e.printStackTrace();
+
+
         }
+
+            writer.close();
+
 
 
 
@@ -179,5 +183,19 @@ public class App
         }
 
         return filePath + "SENTIMENT-" + tick + "-" + dateF + "-" + dateT + ".json";
+    }
+
+    private static String getCsvFilename(String ticks, String from, String to) {
+        String dateF = from.substring(0,8);
+        String dateT = to.substring(0,8);
+        String tick;
+        if(ticks.contains(":")){
+            tick = ticks.replace(":", "-");
+        }
+        else {
+            tick = ticks;
+        }
+
+        return filePath + "SENTIMENT-" + tick + "-" + dateF + "-" + dateT + ".csv";
     }
 }
