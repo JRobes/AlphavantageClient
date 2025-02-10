@@ -71,24 +71,7 @@ public class App
         }
 
 
-        //String filePath = getJSONFilename(tickers, fr, to);
-        JSONObject jsonObject = null;
-        try {
-            // Leer archivo JSON y convertirlo en String
-            String content = new String(Files.readAllBytes(Paths.get(filePath)));
 
-            // Crear el JSONObject a partir del contenido del archivo
-            jsonObject = new JSONObject(content);
-
-            // Mostrar el JSONObject
-            System.out.println("El contenido del JSON es:");
-            System.out.println(jsonObject.toString(4)); // Formateo con sangría de 4 espacios
-            System.out.println("Leido correctamente:");
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Error al leer el archivo JSON.");
-        }
 
     }
 
