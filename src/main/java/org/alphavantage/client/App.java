@@ -24,8 +24,8 @@ public class App
     //private static String dateFrom = "20220501T0000";
     //private static String dateTo   = "20220601T0000";
 
-    //private static String filePath =  "C:\\Users\\jrobes\\Desktop\\AphaVantage\\";
-    private static String filePath =  "C:\\Users\\COTERENA\\Desktop\\AphaVantage\\";
+    private static String filePath =  "C:\\Users\\jrobes\\Desktop\\AphaVantage\\";
+    //private static String filePath =  "C:\\Users\\COTERENA\\Desktop\\AphaVantage\\";
 
     public static void main( String[] args ) throws IOException {
         System.out.println( "Hello World!" );
@@ -42,12 +42,13 @@ public class App
         //String parametros = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20240201T0130&time_TO=20240204T0130&limit=500&apikey=QOGVHCSIFK7MYBC3";
         //String parametros2 = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20220101T0000&time_to=20220201T0000&limit=1000&apikey=QOGVHCSIFK7MYBC3";
 
-        JSONObject inputJSON = readJSONFromFile(theTickers, "20220501T0000", "20220601T0000");
-        writeJSON2File(inputJSON, theTickers, "20220501T0000", "20220601T0000");
+        JSONObject inputJSON = readJSONFromFile(theTickers, "20221201T0000", "20230101T0000");
+        //writeJSON2CsvFile(inputJSON, theTickers, "20220501T0000", "20220601T0000");
+        writeTrainigFile(inputJSON);
 
     }
 
-    private static void writeJSON2File(JSONObject inputJSON, String theTickers, String from, String to) throws IOException {
+    private static void writeJSON2CsvFile(JSONObject inputJSON, String theTickers, String from, String to) throws IOException {
         String filePath = getCsvFilename(theTickers, from, to);
         CSVWriter writer = new CSVWriter(new FileWriter(filePath));
         JSONArray jsonArray = inputJSON.getJSONArray("feed");
@@ -62,22 +63,40 @@ public class App
             for(int j = 0; j < ticker_sentimentArray.length(); j++){
                 JSONObject scores = ticker_sentimentArray.getJSONObject(j);
                 //System.out.println(scores);
-                String relevance_score = scores.getString("relevance_score");
-                String ticker_sentiment_score = scores.getString("ticker_sentiment_score");
-                String ticker_sentiment_label = scores.getString("ticker_sentiment_label");
-                writer.writeNext(new String[]{time, ticker_sentiment_label, ticker_sentiment_score, relevance_score, summary});
+                if(scores.getString("ticker").contentEquals(theTickers)){
+                    if(scores.getDouble("relevance_score") > 0.5){
+                        String relevance_score = scores.getString("relevance_score");
+                        String ticker_sentiment_score = scores.getString("ticker_sentiment_score");
+                        String ticker_sentiment_label = scores.getString("ticker_sentiment_label");
+                        writer.writeNext(new String[]{time, ticker_sentiment_label, ticker_sentiment_score, relevance_score, summary});
+                    }
+                }
+
             }
-
-
         }
 
             writer.close();
-
-
-
-
-
     }
+
+
+    private static void writeTrainigFile(JSONObject inputJSON)  {
+        String trainingFile = filePath + "OpenNLPTrain.txt";
+        try(BufferedWriter writer = new BufferedWriter(new FileWriter(trainingFile, true))){
+            JSONArray jsonArray = inputJSON.getJSONArray("feed");
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject noticia = jsonArray.getJSONObject(i);
+                String overall_sentiment_label = noticia.getString("overall_sentiment_label");
+                String summary = noticia.getString("summary");
+                writer.write(overall_sentiment_label + " " + summary.toLowerCase());
+                writer.newLine();
+            }
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+
+
 
     private static JSONObject readJSONFromFile(String tickers, String fr, String to) {
         //String filePath = "ruta/a/tu/archivo.json";
