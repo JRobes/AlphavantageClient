@@ -14,6 +14,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 public class App
 {
@@ -27,55 +29,104 @@ public class App
     private static String filePath =  "C:\\Users\\jrobes\\Desktop\\AphaVantage\\";
     //private static String filePath =  "C:\\Users\\COTERENA\\Desktop\\AphaVantage\\";
 
-    public static void main( String[] args ) throws IOException {
+    public static void main( String[] args ) {
         System.out.println( "Hello World!" );
 
-        //getSentimentByDate(apiKey, theTickers, "20220501T0000", "20220601T0000");
-        //getSentimentByDate(apiKey, theTickers, "20220601T0000", "20220701T0000");
-        //getSentimentByDate(apiKey, theTickers, "20220701T0000", "20220801T0000");
-        //getSentimentByDate(apiKey, theTickers, "20220801T0000", "20220901T0000");
-        //getSentimentByDate(apiKey, theTickers, "20220901T0000", "20221001T0000");
-        //getSentimentByDate(apiKey, theTickers, "20221001T0000", "20221101T0000");
-        //getSentimentByDate(apiKey, theTickers, "20221101T0000", "20221201T0000");
-        //getSentimentByDate(apiKey, theTickers, "20221201T0000", "20230101T0000");
+
+
+        prepareFilesByYear("2023", apiKey, theTickers);
+
+
+        /*
+        getSentimentByDate(apiKey, theTickers, "20230101T0000", "20230201T0000");
+        getSentimentByDate(apiKey, theTickers, "20230201T0000", "20230301T0000");
+        getSentimentByDate(apiKey, theTickers, "20230301T0000", "20230401T0000");
+        getSentimentByDate(apiKey, theTickers, "20230501T0000", "20230601T0000");
+        getSentimentByDate(apiKey, theTickers, "20230601T0000", "20230701T0000");
+        getSentimentByDate(apiKey, theTickers, "20230701T0000", "20230801T0000");
+        getSentimentByDate(apiKey, theTickers, "20230801T0000", "20230901T0000");
+        getSentimentByDate(apiKey, theTickers, "20230901T0000", "20231001T0000");
+        getSentimentByDate(apiKey, theTickers, "20231001T0000", "20231101T0000");
+        getSentimentByDate(apiKey, theTickers, "20231101T0000", "20231201T0000");
+
+        JSONObject inputJSON = readJSONFromFile(theTickers, "20230101T0000", "20230201T0000");
+        writeTrainigFile(inputJSON);
+
+*/
 
         //String parametros = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20240201T0130&time_TO=20240204T0130&limit=500&apikey=QOGVHCSIFK7MYBC3";
         //String parametros2 = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20220101T0000&time_to=20220201T0000&limit=1000&apikey=QOGVHCSIFK7MYBC3";
 
-        JSONObject inputJSON = readJSONFromFile(theTickers, "20221201T0000", "20230101T0000");
+        //JSONObject inputJSON = readJSONFromFile(theTickers, "20221201T0000", "20230101T0000");
         //writeJSON2CsvFile(inputJSON, theTickers, "20220501T0000", "20220601T0000");
-        writeTrainigFile(inputJSON);
+        //writeTrainigFile(inputJSON);
 
     }
 
-    private static void writeJSON2CsvFile(JSONObject inputJSON, String theTickers, String from, String to) throws IOException {
-        String filePath = getCsvFilename(theTickers, from, to);
-        CSVWriter writer = new CSVWriter(new FileWriter(filePath));
-        JSONArray jsonArray = inputJSON.getJSONArray("feed");
+    public static void prepareFilesByYear(String year, String key, String tick){
+        Map<Integer, String> months = new HashMap();
+        months.put(0, "0101T0000");
+        months.put(1, "0201T0000");
+        months.put(2, "0301T0000");
+        months.put(3, "0401T0000");
+        months.put(4, "0501T0000");
+        months.put(5, "0601T0000");
+        months.put(6, "0701T0000");
+        months.put(7, "0801T0000");
+        months.put(8, "0901T0000");
+        months.put(9, "1001T0000");
+        months.put(10,"1101T0000");
+        months.put(11,"1201T0000");
 
-        for (int i = 0; i < jsonArray.length(); i++) {
-            JSONObject noticia = jsonArray.getJSONObject(i);
-            String time = noticia.getString("time_published");
-            String summary = noticia.getString("summary");
-            JSONArray ticker_sentimentArray = noticia.getJSONArray("ticker_sentiment");
-            System.out.println("ticker_sentimentArray: " + ticker_sentimentArray.length());
-
-            for(int j = 0; j < ticker_sentimentArray.length(); j++){
-                JSONObject scores = ticker_sentimentArray.getJSONObject(j);
-                //System.out.println(scores);
-                if(scores.getString("ticker").contentEquals(theTickers)){
-                    if(scores.getDouble("relevance_score") > 0.5){
-                        String relevance_score = scores.getString("relevance_score");
-                        String ticker_sentiment_score = scores.getString("ticker_sentiment_score");
-                        String ticker_sentiment_label = scores.getString("ticker_sentiment_label");
-                        writer.writeNext(new String[]{time, ticker_sentiment_label, ticker_sentiment_score, relevance_score, summary});
-                    }
-                }
-
+        for(int i = 0; i <= 11; i++){
+            String prep1 = year + months.get(i);
+            String prep2 = "";
+            if(i == 11){
+                prep2 = year + "1231T0000";
             }
+            else {
+                prep2 = year + months.get(i +1);
+            }
+            getSentimentByDate(key, tick, prep1, prep2);
+            JSONObject inputJSON = readJSONFromFile(tick, prep1, prep2);
+            writeJSON2CsvFile(inputJSON, tick, year);
+            writeTrainigFile(inputJSON);
         }
 
+    }
+
+    private static void writeJSON2CsvFile(JSONObject inputJSON, String theTickers, String year)  {
+        String filePath = getCsvFilename(theTickers, year);
+
+        try(CSVWriter writer = new CSVWriter(new FileWriter(filePath))){
+            JSONArray jsonArray = inputJSON.getJSONArray("feed");
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject noticia = jsonArray.getJSONObject(i);
+                String time = noticia.getString("time_published");
+                String summary = noticia.getString("summary");
+                JSONArray ticker_sentimentArray = noticia.getJSONArray("ticker_sentiment");
+                System.out.println("ticker_sentimentArray: " + ticker_sentimentArray.length());
+
+                for(int j = 0; j < ticker_sentimentArray.length(); j++){
+                    JSONObject scores = ticker_sentimentArray.getJSONObject(j);
+                    //System.out.println(scores);
+                    if(scores.getString("ticker").contentEquals(theTickers)){
+                        if(scores.getDouble("relevance_score") > 0.5){
+                            String relevance_score = scores.getString("relevance_score");
+                            String ticker_sentiment_score = scores.getString("ticker_sentiment_score");
+                            String ticker_sentiment_label = scores.getString("ticker_sentiment_label");
+                            writer.writeNext(new String[]{time, ticker_sentiment_label, ticker_sentiment_score, relevance_score, summary});
+                        }
+                    }
+                }
+            }
+
             writer.close();
+
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+
     }
 
 
@@ -204,9 +255,9 @@ public class App
         return filePath + "SENTIMENT-" + tick + "-" + dateF + "-" + dateT + ".json";
     }
 
-    private static String getCsvFilename(String ticks, String from, String to) {
-        String dateF = from.substring(0,8);
-        String dateT = to.substring(0,8);
+    private static String getCsvFilename(String ticks, String year) {
+        //String dateF = from.substring(0,8);
+        //String dateT = to.substring(0,8);
         String tick;
         if(ticks.contains(":")){
             tick = ticks.replace(":", "-");
@@ -215,6 +266,6 @@ public class App
             tick = ticks;
         }
 
-        return filePath + "SENTIMENT-" + tick + "-" + dateF + "-" + dateT + ".csv";
+        return filePath + "SENTIMENT-" + tick + "-" + year + ".csv";
     }
 }
