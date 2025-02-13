@@ -24,7 +24,9 @@ public class App
 
     private static final String baseUrl = "https://www.alphavantage.co/query";
     private static String apiKey = "QOGVHCSIFK7MYBC3";
-    private static String theTickers = "CRYPTO:BTC";
+    //private static String theTickers = "CRYPTO:BTC";
+    private static String theTickers = "NVDA";
+
 
     private static String filePath =  "C:\\Users\\jrobes\\Desktop\\AphaVantage\\";
     //private static String filePath =  "C:\\Users\\COTERENA\\Desktop\\AphaVantage\\";
