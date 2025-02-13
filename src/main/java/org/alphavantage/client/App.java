@@ -19,51 +19,34 @@ import java.util.Map;
 
 public class App
 {
+    //String parametros = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20240201T0130&time_TO=20240204T0130&limit=500&apikey=QOGVHCSIFK7MYBC3";
+    //String parametros2 = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20220101T0000&time_to=20220201T0000&limit=1000&apikey=QOGVHCSIFK7MYBC3";
 
     private static final String baseUrl = "https://www.alphavantage.co/query";
     private static String apiKey = "QOGVHCSIFK7MYBC3";
     private static String theTickers = "CRYPTO:BTC";
-    //private static String dateFrom = "20220501T0000";
-    //private static String dateTo   = "20220601T0000";
 
     private static String filePath =  "C:\\Users\\jrobes\\Desktop\\AphaVantage\\";
     //private static String filePath =  "C:\\Users\\COTERENA\\Desktop\\AphaVantage\\";
 
     public static void main( String[] args ) {
         System.out.println( "Hello World!" );
-
-
-
-        prepareFilesByYear("2023", apiKey, theTickers);
-
-
-        /*
-        getSentimentByDate(apiKey, theTickers, "20230101T0000", "20230201T0000");
-        getSentimentByDate(apiKey, theTickers, "20230201T0000", "20230301T0000");
-        getSentimentByDate(apiKey, theTickers, "20230301T0000", "20230401T0000");
-        getSentimentByDate(apiKey, theTickers, "20230501T0000", "20230601T0000");
-        getSentimentByDate(apiKey, theTickers, "20230601T0000", "20230701T0000");
-        getSentimentByDate(apiKey, theTickers, "20230701T0000", "20230801T0000");
-        getSentimentByDate(apiKey, theTickers, "20230801T0000", "20230901T0000");
-        getSentimentByDate(apiKey, theTickers, "20230901T0000", "20231001T0000");
-        getSentimentByDate(apiKey, theTickers, "20231001T0000", "20231101T0000");
-        getSentimentByDate(apiKey, theTickers, "20231101T0000", "20231201T0000");
-
-        JSONObject inputJSON = readJSONFromFile(theTickers, "20230101T0000", "20230201T0000");
-        writeTrainigFile(inputJSON);
-
-*/
-
-        //String parametros = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20240201T0130&time_TO=20240204T0130&limit=500&apikey=QOGVHCSIFK7MYBC3";
-        //String parametros2 = "?function=NEWS_SENTIMENT&tickers=CRYPTO:BTC&time_from=20220101T0000&time_to=20220201T0000&limit=1000&apikey=QOGVHCSIFK7MYBC3";
+        prepareFilesByYear("2024", apiKey, theTickers);
 
         //JSONObject inputJSON = readJSONFromFile(theTickers, "20221201T0000", "20230101T0000");
         //writeJSON2CsvFile(inputJSON, theTickers, "20220501T0000", "20220601T0000");
         //writeTrainigFile(inputJSON);
-
     }
 
     public static void prepareFilesByYear(String year, String key, String tick){
+        prepareFilesByYear(year, 1, key, tick);
+    }
+
+    public static void prepareFilesByYear(String year, int month , String key, String tick){
+        if(month < 1 || month > 12){
+            System.out.println("El mes tiene que se un numero entre 1 y 12.");
+            return;
+        }
         Map<Integer, String> months = new HashMap();
         months.put(0, "0101T0000");
         months.put(1, "0201T0000");
@@ -78,7 +61,7 @@ public class App
         months.put(10,"1101T0000");
         months.put(11,"1201T0000");
 
-        for(int i = 0; i <= 11; i++){
+        for(int i = month - 1; i <= 11; i++){
             String prep1 = year + months.get(i);
             String prep2 = "";
             if(i == 11){
@@ -90,7 +73,7 @@ public class App
             getSentimentByDate(key, tick, prep1, prep2);
             JSONObject inputJSON = readJSONFromFile(tick, prep1, prep2);
             writeJSON2CsvFile(inputJSON, tick, year);
-            writeTrainigFile(inputJSON);
+            writeTrainigFile(inputJSON, year, tick);
         }
 
     }
@@ -98,19 +81,20 @@ public class App
     private static void writeJSON2CsvFile(JSONObject inputJSON, String theTickers, String year)  {
         String filePath = getCsvFilename(theTickers, year);
 
-        try(CSVWriter writer = new CSVWriter(new FileWriter(filePath))){
+        try(CSVWriter writer = new CSVWriter(new FileWriter(filePath, true))){
             JSONArray jsonArray = inputJSON.getJSONArray("feed");
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject noticia = jsonArray.getJSONObject(i);
                 String time = noticia.getString("time_published");
                 String summary = noticia.getString("summary");
                 JSONArray ticker_sentimentArray = noticia.getJSONArray("ticker_sentiment");
-                System.out.println("ticker_sentimentArray: " + ticker_sentimentArray.length());
+                //System.out.println("ticker_sentimentArray: " + ticker_sentimentArray.length());
 
                 for(int j = 0; j < ticker_sentimentArray.length(); j++){
                     JSONObject scores = ticker_sentimentArray.getJSONObject(j);
                     //System.out.println(scores);
                     if(scores.getString("ticker").contentEquals(theTickers)){
+                        //Sólo guardar noticias en el archivo CSV que tengan relenvancia mayor que 0.5
                         if(scores.getDouble("relevance_score") > 0.5){
                             String relevance_score = scores.getString("relevance_score");
                             String ticker_sentiment_score = scores.getString("ticker_sentiment_score");
@@ -120,18 +104,17 @@ public class App
                     }
                 }
             }
-
-            writer.close();
+            //writer.close();
 
         }catch (IOException e){
             e.printStackTrace();
         }
-
     }
 
 
-    private static void writeTrainigFile(JSONObject inputJSON)  {
-        String trainingFile = filePath + "OpenNLPTrain.txt";
+    private static void writeTrainigFile(JSONObject inputJSON, String yyyy, String ticke)  {
+        String tickName = ticke.contains(":")? ticke.replace(":", "-"): ticke;
+        String trainingFile = filePath + "OpenNLPTrain-" + tickName+ "-" + yyyy + ".txt";
         try(BufferedWriter writer = new BufferedWriter(new FileWriter(trainingFile, true))){
             JSONArray jsonArray = inputJSON.getJSONArray("feed");
             for (int i = 0; i < jsonArray.length(); i++) {
@@ -159,11 +142,11 @@ public class App
 
             // Crear el JSONObject a partir del contenido del archivo
             jsonObject = new JSONObject(content);
-
+            System.out.println("Numero de noticias: " + jsonObject.getString("items"));
             // Mostrar el JSONObject
-            System.out.println("El contenido del JSON es:");
-            System.out.println(jsonObject.toString(4)); // Formateo con sangría de 4 espacios
-            System.out.println("Leido correctamente:");
+            //System.out.println("El contenido del JSON es:");
+            //System.out.println(jsonObject.toString(4)); // Formateo con sangría de 4 espacios
+            //System.out.println("Leido correctamente:");
 
         } catch (IOException e) {
             e.printStackTrace();
